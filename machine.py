@@ -25,8 +25,24 @@ class MACHINE():
         self.triangles = [] # [(a, b), (c, d), (e, f)]
 
     def find_best_selection(self):
-        available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
-        return random.choice(available)
+
+        # ***1. 한 번도 선택되지 않은 점 두 개를 찾아서 잇도록 시키기 (Degree가 0인 두 점 찾아서 잇기)***
+        # 이미 선택된 선에 사용된 모든 점을 추출
+        used_points = {point for line in self.drawn_lines for point in line}
+
+        # 아직 선택되지 않은 점들 중에서 2개를 무작위로 선택하여 선을 만듦, 하지만 두 점을 잇지 못하는 경우는 제외시킴
+        available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2))
+                     if point1 not in used_points and point2 not in used_points and self.check_availability([point1, point2])]
+
+        if available: #Degree가 0인 두 점이 있고 이을 수 있는 경우
+            selected_pair = random.choice(available)
+            print("1")
+            return selected_pair
+        else: #Degree가 0인 두 점이 있지만 이을 수 없을 경우 OR Degree가 0인 두 점이 없는 경우
+            print("2")
+            selected_pair = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
+            return random.choice(selected_pair)
+            
     
     def check_availability(self, line):
         line_string = LineString(line)
