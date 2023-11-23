@@ -26,7 +26,36 @@ class MACHINE():
 
     def find_best_selection(self):
 
-        # ***1. 한 번도 선택되지 않은 점 두 개를 찾아서 잇도록 시키기 (Degree가 0인 두 점 찾아서 잇기)***
+        #***가장 첫 번째 로직: 삼각형을 만들 수 있으면 만들기***
+
+        #한 번 이상 사용된 점들을 찾아 저장한다.
+        used_points = set(point for line in self.drawn_lines for point in line)
+    
+        # 두 번 이상 사용된 점들을 찾아 Double_selected_points에 저장한다.
+        double_selected_points = [point for point in used_points if self.degree_of_point(point) >= 2]
+        available = []
+
+        # 두 번 이상 사용된 점들 중 기준이 되는 점을 선택한다.
+        for double_point in double_selected_points:
+            connected_lines = [line for line in self.drawn_lines if double_point in line]
+            connected_points = set(point for line in connected_lines for point in line if point != double_point)
+            
+            # 기준이 되는 점과 연결된 다른 점들 중에서 삼각형이 가능한 선을 찾고, available에 추가한다.
+            for connected_point_pair in combinations(connected_points, 2):
+                potential_line = list(connected_point_pair)
+            
+                if self.check_availability(potential_line):
+                    available.append(potential_line)
+        # 삼각형이 가능한 모든 선을 찾았으면 그 선들 중 하나를 랜덤으로 선택한다.
+        if available:  
+            print(available)
+            selected_pair = random.choice(available)
+            print("Drawing line with used points")
+            return selected_pair
+        #***첫 번째 로직 끝***
+        
+        #***두 번째 로직: 한 번도 선택되지 않은 점 두 개를 찾아서 잇도록 시키기 (Degree가 0인 두 점 찾아서 잇기)***
+        
         # 이미 선택된 선에 사용된 모든 점을 추출
         used_points = {point for line in self.drawn_lines for point in line}
 
@@ -42,8 +71,12 @@ class MACHINE():
             print("2")
             selected_pair = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
             return random.choice(selected_pair)
+        #***두 번째 로직 끝***
             
-    
+    def degree_of_point(self, point):
+        return sum(1 for line in self.drawn_lines if point in line)
+
+
     def check_availability(self, line):
         line_string = LineString(line)
 
