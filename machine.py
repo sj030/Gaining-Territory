@@ -1,6 +1,7 @@
 import random
 from itertools import combinations
-from shapely.geometry import LineString, Point
+from itertools import product, chain, combinations
+from shapely.geometry import LineString, Point, Polygon
 
 class MACHINE():
     """
@@ -23,9 +24,14 @@ class MACHINE():
         self.whole_points = []
         self.location = []
         self.triangles = [] # [(a, b), (c, d), (e, f)]
+        
+        self.MaxScore_depth3 = 0
+        self.MinScore_depth2 = 0
+        self.MaxScore_depth1 = 0
 
     def find_best_selection(self):
 
+        """
         #***가장 첫 번째 로직: 삼각형을 만들 수 있으면 만들기***
 
         #한 번 이상 사용된 점들을 찾아 저장한다.
@@ -72,12 +78,109 @@ class MACHINE():
             selected_pair = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
             return random.choice(selected_pair)
         #***두 번째 로직 끝***
+        """
+        
+        self.MaxScore_depth1 = 0
+        self.MinScore_depth2 = 0
+        self.MaxScore_depth3 = 0
+        #print("before minmax")
+        best_value, best_move = self.minimax(3, True)  # 최대 깊이는 3으로 설정 (조절 가능)
+        print(best_move)
+        return best_move
+
+    def minimax(self, depth, maximizing_player):
+        if depth == 0 or self.is_game_over() or not self.generate_moves():
+            #print("여기요")
+            return self.evaluate_board(), None
+
+        if maximizing_player:
+            max_eval = float('-inf')
+            best_move = None
+
+            for move in self.generate_moves():
+                self.make_move(move, maximizing_player, depth)
+                eval = self.minimax(depth - 1, False)[0]
+                #print(eval)
+                if(depth == 1):
+                    self.MaxScore_depth1 = 0
+                elif(depth == 3):
+                    self.MaxScore_depth3 = 0
+                self.undo_move(move)
+
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = move
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            best_move = None
+
+            for move in self.generate_moves():
+                self.make_move(move, maximizing_player, depth)
+                eval = self.minimax(depth - 1, True)[0]
+                #print(eval)
+                if(depth == 2):
+                    self.MinScore_depth2 = 0
+                self.undo_move(move)
+
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = move
+            return min_eval, best_move
+
+    def evaluate_board(self):
+        
+        return self.MaxScore_depth1 - self.MinScore_depth2 + self.MaxScore_depth3
+
+    def check_endgame(self):
+        remain_to_draw = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
+        return False if remain_to_draw else True
+
+    def is_game_over(self):
+        self.check_endgame()    
+
+    def generate_moves(self):
+        # 가능한 모든 선분을 moves에 추가
+        moves = []
+        for point1, point2 in combinations(self.whole_points, 2):
+            line = [point1, point2]
+            if self.check_availability(line):
+                moves.append(line)
+        return moves
+
+    def make_move(self, move, turn, depth):
+        # 움직임을 수행하는 로직을 추가하세요.
+        if(turn):
+            #move = self.organize_points(move)
+            if self.check_availability(move):
+                self.drawn_lines.append(move)
+                self.check_triangle_Max(move, depth)
+            pass
+        else:
+            #move = self.organize_points(move)
+            if self.check_availability(move):
+                self.drawn_lines.append(move)
+                self.check_triangle_Min(move, depth)
+            pass
+
+
+    def undo_move(self, move):
+        # 움직임을 취소하는 로직
+        if move in self.drawn_lines:
+            self.drawn_lines.remove(move)
+            if(self.triangles):
+                recent_triangle = self.triangles[-1]
+                self.triangles.remove(recent_triangle)
+        
             
     def degree_of_point(self, point):
         return sum(1 for line in self.drawn_lines if point in line)
 
 
     def check_availability(self, line):
+        if line is None:
+            return False
+
         line_string = LineString(line)
 
         # Must be one of the whole points
@@ -108,4 +211,87 @@ class MACHINE():
         else:
             return False    
 
+    def check_triangle_Max(self, line, depth):
+        self.get_score = False
+
+        point1 = line[0]
+        point2 = line[1]
+
+        point1_connected = []
+        point2_connected = []
+
+        for l in self.drawn_lines:
+            if l==line: # 자기 자신 제외
+                continue
+            if point1 in l:
+                point1_connected.append(l)
+            if point2 in l:
+                point2_connected.append(l)
+
+        if point1_connected and point2_connected: # 최소한 2점 모두 다른 선분과 연결되어 있어야 함
+            for line1, line2 in product(point1_connected, point2_connected):
+                
+                # Check if it is a triangle & Skip the triangle has occupied
+                triangle = self.organize_points(list(set(chain(*[line, line1, line2]))))
+                if len(triangle) != 3 or triangle in self.triangles:
+                    continue
+
+                empty = True
+                for point in self.whole_points:
+                    if point in triangle:
+                        continue
+                    if bool(Polygon(triangle).intersection(Point(point))):
+                        empty = False
+
+                if empty:
+                    self.triangles.append(triangle)
+                    if(depth == 1):
+                        self.MaxScore_depth1 += 1
+                    elif(depth == 3):
+                        self.MaxScore_depth3 += 1
+
+                        
+                    
+    def check_triangle_Min(self, line, depth):
+        self.get_score = False
+
+        point1 = line[0]
+        point2 = line[1]
+
+        point1_connected = []
+        point2_connected = []
+
+        for l in self.drawn_lines:
+            if l==line: # 자기 자신 제외
+                continue
+            if point1 in l:
+                point1_connected.append(l)
+            if point2 in l:
+                point2_connected.append(l)
+
+        if point1_connected and point2_connected: # 최소한 2점 모두 다른 선분과 연결되어 있어야 함
+            for line1, line2 in product(point1_connected, point2_connected):
+                
+                # Check if it is a triangle & Skip the triangle has occupied
+                triangle = self.organize_points(list(set(chain(*[line, line1, line2]))))
+                if len(triangle) != 3 or triangle in self.triangles:
+                    continue
+
+                empty = True
+                for point in self.whole_points:
+                    if point in triangle:
+                        continue
+                    if bool(Polygon(triangle).intersection(Point(point))):
+                        empty = False
+
+                if empty:
+                    if(depth == 2):
+                        self.MinScore_depth2 += 1
+                
+
+    def organize_points(self, point_list):
+        if point_list is None:
+            return None
+        point_list.sort(key=lambda x: (x[0], x[1]))
+        return point_list
     
