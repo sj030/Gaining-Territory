@@ -29,6 +29,9 @@ class MACHINE():
         self.MinScore_depth2 = 0
         self.MaxScore_depth1 = 0
 
+        self.Alpha = float('-inf')
+        self.Beta = float('inf')
+
     def find_best_selection(self):
 
         """
@@ -83,6 +86,10 @@ class MACHINE():
         self.MaxScore_depth1 = 0
         self.MinScore_depth2 = 0
         self.MaxScore_depth3 = 0
+
+        self.Alpha = float('-inf')
+        self.Beta = float('inf')
+
         #print("before minmax")
         best_value, best_move = self.minimax(3, True)  # 최대 깊이는 3으로 설정 (조절 가능)
         print(best_move)
@@ -103,13 +110,22 @@ class MACHINE():
                 #print(eval)
                 if(depth == 1):
                     self.MaxScore_depth1 = 0
+                    #알파값 갱신
+                    if(eval > self.Alpha):
+                        self.Alpha = eval
                 elif(depth == 3):
                     self.MaxScore_depth3 = 0
+
                 self.undo_move(move)
 
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
+
+                if(depth == 1): #depth가 1일 때만
+                    #결과가 베타값보다 크거나 같으면 가지치기
+                    if(eval >= self.Beta):
+                        break
             return max_eval, best_move
         else:
             min_eval = float('inf')
@@ -121,11 +137,19 @@ class MACHINE():
                 #print(eval)
                 if(depth == 2):
                     self.MinScore_depth2 = 0
+                    #베타값 갱신
+                    if(eval < self.Beta):
+                        self.Beta = eval
                 self.undo_move(move)
 
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
+
+                #결과가 알파값보다 작거나 같으면 가지치기
+                if(eval <= self.Alpha):
+                    break
+
             return min_eval, best_move
 
     def evaluate_board(self):
