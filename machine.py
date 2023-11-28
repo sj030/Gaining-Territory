@@ -25,6 +25,7 @@ class MACHINE():
         self.location = []
         self.triangles = [] # [(a, b), (c, d), (e, f)]
         
+        self.FirstTriangle = 0
         self.MaxScore_depth3 = 0
         self.MinScore_depth2 = 0
         self.MaxScore_depth1 = 0
@@ -34,9 +35,25 @@ class MACHINE():
 
     def find_best_selection(self):
 
-        """
+        
         #***가장 첫 번째 로직: 삼각형을 만들 수 있으면 만들기***
+        max_eval = float('-inf')
+        best_move = None
 
+        for move in self.generate_moves():
+            self.make_move(move, True, depth=-1)
+            eval = self.FirstTriangle
+            self.FirstTriangle = 0
+
+            self.undo_move(move)
+
+            if eval > max_eval:
+                max_eval = eval
+                best_move = move
+
+        return best_move
+        
+        """
         #한 번 이상 사용된 점들을 찾아 저장한다.
         used_points = set(point for line in self.drawn_lines for point in line)
     
@@ -59,8 +76,9 @@ class MACHINE():
         if available:  
             print(available)
             selected_pair = random.choice(available)
-            print("Drawing line with used points")
+            print("1")
             return selected_pair
+        """
         #***첫 번째 로직 끝***
         
         #***두 번째 로직: 한 번도 선택되지 않은 점 두 개를 찾아서 잇도록 시키기 (Degree가 0인 두 점 찾아서 잇기)***
@@ -74,15 +92,28 @@ class MACHINE():
 
         if available: #Degree가 0인 두 점이 있고 이을 수 있는 경우
             selected_pair = random.choice(available)
-            print("1")
+            print("2")
             return selected_pair
         else: #Degree가 0인 두 점이 있지만 이을 수 없을 경우 OR Degree가 0인 두 점이 없는 경우
+            self.MaxScore_depth1 = 0
+            self.MinScore_depth2 = 0
+            self.MaxScore_depth3 = 0
+
+            self.Alpha = float('-inf')
+            self.Beta = float('inf')
+
+            print("3")
+            best_value, best_move = self.minimax(3, True)  # 최대 깊이는 3으로 설정 (조절 가능)
+            print(best_move)
+            return best_move
+            """
             print("2")
             selected_pair = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
             return random.choice(selected_pair)
+            """
         #***두 번째 로직 끝***
-        """
         
+        """
         self.MaxScore_depth1 = 0
         self.MinScore_depth2 = 0
         self.MaxScore_depth3 = 0
@@ -94,6 +125,7 @@ class MACHINE():
         best_value, best_move = self.minimax(3, True)  # 최대 깊이는 3으로 설정 (조절 가능)
         print(best_move)
         return best_move
+        """
 
     def minimax(self, depth, maximizing_player):
         if depth == 0 or self.is_game_over() or not self.generate_moves():
@@ -108,7 +140,7 @@ class MACHINE():
                 self.make_move(move, maximizing_player, depth)
                 eval = self.minimax(depth - 1, False)[0]
                 #print(eval)
-                if(depth == 1):
+                if(depth == 1): 
                     self.MaxScore_depth1 = 0
                     #알파값 갱신
                     if(eval > self.Alpha):
@@ -269,6 +301,8 @@ class MACHINE():
 
                 if empty:
                     self.triangles.append(triangle)
+                    if(depth == -1):
+                        self.FirstTriangle += 1
                     if(depth == 1):
                         self.MaxScore_depth1 += 1
                     elif(depth == 3):
