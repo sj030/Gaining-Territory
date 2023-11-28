@@ -50,8 +50,9 @@ class MACHINE():
             if eval > max_eval:
                 max_eval = eval
                 best_move = move
-
-        return best_move
+        if(max_eval != 0):
+            print(max_eval)    
+            return best_move      
         
         """
         #한 번 이상 사용된 점들을 찾아 저장한다.
