@@ -24,10 +24,57 @@ class MACHINE():
         self.location = []
         self.triangles = [] # [(a, b), (c, d), (e, f)]
 
+        # for convex Hull
+        self.isFirst = True
+        self.HullLines = []
+        self.HullPoints = []
+        self.ansTriNum = 0
+        self.ansLineNum = 0
+        # Q. num dots와 whole_points의 차이?
+
     def find_best_selection(self):
-        available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
-        return random.choice(available)
-    
+        available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2], self.drawn_lines)]
+
+        # convex hull 구하는 과정 -> 처음 한 번만 실행
+        if self.isFirst:
+            self.getConvexHull(self.whole_points)
+            self.isFirst = False
+
+        availConv = []
+        for i in self.HullLines:
+            if self.check_availability(i, self.drawn_lines):
+                availConv.append(i)
+        if len(availConv) == 0:
+            return random.choice(available)
+        else:
+            return random.choice(availConv)
+
+    def ccw(self, p1, p2, p3):
+        return (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0])
+
+    def getConvexHull(self, points):
+        points = sorted(points)
+        lower = []
+        for p in points:
+            while len(lower) >= 2 and self.ccw(lower[-2], lower[-1], p) < 0:
+                lower.pop()
+            lower.append(p)
+        upper = []
+        for p in reversed(points):
+            while len(upper) >= 2 and self.ccw(upper[-2], upper[-1], p) < 0:
+                upper.pop()
+            upper.append(p)
+        self.HullPoints = lower[:-1] + upper[:-1]
+        for idx in range(len(self.HullPoints) - 1):
+            self.HullLines.append([self.HullPoints[idx], self.HullPoints[idx + 1]])
+        self.ansTriNum = (2 * len(self.whole_points)) - len(self.HullPoints) + 2
+        self.ansLineNum = (3 * len(self.whole_points)) - len(self.HullPoints) + 3
+        print(" Hull point is " + str(self.HullPoints))
+        print(" Hull Line is " + str(self.HullLines))
+        print(" ANS TRI is " + str(self.ansTriNum))
+        print(" ANS LINE is " + str(self.ansLineNum))
+
+
     def check_availability(self, line, drawn):
         line_string = LineString(line)
 
