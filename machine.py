@@ -31,8 +31,10 @@ class MACHINE():
         self.ansTriNum = 0
         self.ansLineNum = 0
         # Q. num dots와 whole_points의 차이?
+        self.roundCount = 0
 
     def find_best_selection(self):
+        self.roundCount += 1
         available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2], self.drawn_lines)]
 
         # convex hull 구하는 과정 -> 처음 한 번만 실행
@@ -40,22 +42,23 @@ class MACHINE():
             self.getConvexHull(self.whole_points)
             self.isFirst = False
 
-        availConv = []
-        temp = available[0] # just temp
-        for i in self.HullLines:
-            if self.check_availability(i, self.drawn_lines):
-                availConv.append(i)
-        if len(availConv) == 0:
-            temp = random.choice(available)
-        else:
-            temp = random.choice(availConv)
+        if self.roundCount <= 2: # 초기 2회 실행
+            availConv = []
+            temp = available[0] # just temp
+            for i in self.HullLines:
+                if self.check_availability(i, self.drawn_lines):
+                    availConv.append(i)
+            if len(availConv) == 0:
+                return random.choice(available)
+            else:
+                return random.choice(availConv)
         # before return, I want to check IT makes triangles
         # temp = self.organize_points(temp)
         # tempBoard = self.drawn_lines
         # tempBoard.append(temp)
         # print(self.checkT(temp, tempBoard, self.triangles))
         # print("out")
-        return temp
+        return random.choice(available)
 
 
     def ccw(self, p1, p2, p3):
