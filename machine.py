@@ -28,7 +28,7 @@ class MACHINE():
         available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
         return random.choice(available)
     
-    def check_availability(self, line):
+    def check_availability(self, line, drawn):
         line_string = LineString(line)
 
         # Must be one of the whole points
@@ -45,14 +45,14 @@ class MACHINE():
 
         # Must not cross another line
         condition3 = True
-        for l in self.drawn_lines:
+        for l in drawn:
             if len(list(set([line[0], line[1], l[0], l[1]]))) == 3:
                 continue
             elif bool(line_string.intersection(LineString(l))):
                 condition3 = False
 
         # Must be a new line
-        condition4 = (line not in self.drawn_lines)
+        condition4 = (line not in drawn)
 
         if condition1 and condition2 and condition3 and condition4:
             return True
