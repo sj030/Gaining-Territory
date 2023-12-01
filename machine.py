@@ -1,6 +1,6 @@
 import random
-from itertools import combinations
-from shapely.geometry import LineString, Point
+from itertools import product, chain, combinations
+from shapely.geometry import LineString, Point, Polygon
 
 class MACHINE():
     """
@@ -41,13 +41,22 @@ class MACHINE():
             self.isFirst = False
 
         availConv = []
+        temp = available[0] # just temp
         for i in self.HullLines:
             if self.check_availability(i, self.drawn_lines):
                 availConv.append(i)
         if len(availConv) == 0:
-            return random.choice(available)
+            temp = random.choice(available)
         else:
-            return random.choice(availConv)
+            temp = random.choice(availConv)
+        # before return, I want to check IT makes triangles
+        # temp = self.organize_points(temp)
+        # tempBoard = self.drawn_lines
+        # tempBoard.append(temp)
+        # print(self.checkT(temp, tempBoard, self.triangles))
+        # print("out")
+        return temp
+
 
     def ccw(self, p1, p2, p3):
         return (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0])
@@ -104,6 +113,45 @@ class MACHINE():
         if condition1 and condition2 and condition3 and condition4:
             return True
         else:
-            return False    
+            return False
 
-    
+    def checkT(self, newLine, board, curTri): # board -> self.drawn_lines | curTir -> Triangle
+        counting = 0
+
+        point1 = newLine[0]
+        point2 = newLine[1]
+
+        point1_connected = []
+        point2_connected = []
+
+        for l in board:
+            if l == newLine:  # 자기 자신 제외
+                continue
+            if point1 in l:
+                point1_connected.append(l)
+            if point2 in l:
+                point2_connected.append(l)
+
+        if point1_connected and point2_connected:  # 최소한 2점 모두 다른 선분과 연결되어 있어야 함
+            for line1, line2 in product(point1_connected, point2_connected):
+
+                # Check if it is a triangle & Skip the triangle has occupied
+                triangle = self.organize_points(list(set(chain(*[newLine, line1, line2]))))
+                if len(triangle) != 3 or triangle in curTri:
+                    continue
+
+                empty = True
+                for point in self.whole_points:
+                    if point in triangle:
+                        continue
+                    if bool(Polygon(triangle).intersection(Point(point))):
+                        empty = False
+
+                if empty:
+                    counting += 1
+        return counting
+
+    # Organization Functions
+    def organize_points(self, point_list):
+        point_list.sort(key=lambda x: (x[0], x[1]))
+        return point_list
