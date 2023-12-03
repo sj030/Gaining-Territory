@@ -1,6 +1,6 @@
 import random
-from itertools import combinations
-from shapely.geometry import LineString, Point
+from itertools import combinations, product, chain
+from shapely.geometry import LineString, Point, Polygon
 
 class MACHINE():
     """
@@ -25,15 +25,112 @@ class MACHINE():
         self.triangles = [] # [(a, b), (c, d), (e, f)]
 
     def find_best_selection(self):
-        available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
-        return random.choice(available)
-    
+
+        candidates = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
+        depth = 2
+
+        score, line = self.minimax('MACHINE', depth, candidates)
+        print(score, line)
+        return line
+
+    def minimax(self, turn, depth, candidates):
+
+        if turn == 'MACHINE':
+
+            if depth == 0:
+                return (0, None)
+
+            max_score = 0
+            max_line = []
+
+            for candidate in candidates:
+                if candidate not in self.drawn_lines:
+                    self.drawn_lines.append(candidate)
+
+                    cur_score = self.count_score(candidate)
+
+                    min_score, min_line = self.minimax('USER', depth - 1, candidates)
+
+                    if len(max_line) == 0:
+                        max_score = cur_score - min_score
+                        max_line = candidate
+
+                    if (cur_score - min_score) >= max_score:
+                        max_score = cur_score - min_score
+                        max_line = candidate
+
+                    self.drawn_lines.pop()
+            return max_score, max_line
+        else:
+            max_score = 0
+            max_line = []
+
+            for candidate in candidates:
+                if candidate not in self.drawn_lines:
+                    self.drawn_lines.append(candidate)
+
+                    cur_score = self.count_score(candidate)
+                    min_score, min_line = self.minimax('MACHINE', depth - 1, candidates)
+
+                    if len(max_line) == 0:
+                        max_score = cur_score - min_score
+                        max_line = candidate
+
+                    if (cur_score - min_score) >= max_score:
+                        max_score = cur_score - min_score
+                        max_line = candidate
+                    self.drawn_lines.pop()
+
+            return max_score, max_line
+
+    def count_score(self, line):
+        score = 0
+
+        point1 = line[0]
+        point2 = line[1]
+
+        point1_connected = []
+        point2_connected = []
+
+        for l in self.drawn_lines:
+            if l == line:  # 자기 자신 제외
+                continue
+            if point1 in l:
+                point1_connected.append(l)
+            if point2 in l:
+                point2_connected.append(l)
+
+        if point1_connected and point2_connected:  # 최소한 2점 모두 다른 선분과 연결되어 있어야 함
+            for line1, line2 in product(point1_connected, point2_connected):
+
+                # Check if it is a triangle & Skip the triangle has occupied
+                triangle = self.organize_points(list(set(chain(*[line, line1, line2]))))
+                if len(triangle) != 3 or triangle in self.triangles:
+                    continue
+
+                empty = True
+                for point in self.whole_points:
+                    if point in triangle:
+                        continue
+                    if bool(Polygon(triangle).intersection(Point(point))):
+                        empty = False
+
+                if empty:
+                    score += 1
+
+            return score
+        return 0
+
+    def organize_points(self, point_list):
+        point_list.sort(key=lambda x: (x[0], x[1]))
+        return point_list
+
     def check_availability(self, line):
         line_string = LineString(line)
 
         # Must be one of the whole points
         condition1 = (line[0] in self.whole_points) and (line[1] in self.whole_points)
-        
+
         # Must not skip a dot
         condition2 = True
         for point in self.whole_points:
