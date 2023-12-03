@@ -1,6 +1,7 @@
 import random
 from itertools import combinations
 from shapely.geometry import LineString, Point
+from scipy.spatial import ConvexHull
 
 class MACHINE():
     """
@@ -23,6 +24,12 @@ class MACHINE():
         self.whole_points = []
         self.location = []
         self.triangles = [] # [(a, b), (c, d), (e, f)]
+
+        # Convex Hull 위의 점들을 무작위로 선택하는 함수
+    def random_points_on_convex_hull(self, points):
+        hull = ConvexHull(points)
+        hull_points = [points[i] for i in hull.vertices]
+        return random.choice(hull_points)
 
     def find_best_selection(self):
         available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
@@ -58,5 +65,3 @@ class MACHINE():
             return True
         else:
             return False    
-
-    
