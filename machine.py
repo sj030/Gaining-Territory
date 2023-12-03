@@ -30,10 +30,72 @@ class MACHINE():
         hull = ConvexHull(points)
         hull_points = [points[i] for i in hull.vertices]
         return random.choice(hull_points)
+    
+    def minimax(self, depth, is_maximizing):
+        if depth == 0:
+            return self.evaluate()
+
+        if is_maximizing:
+            best_score = float('-inf')
+            available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
+
+            for move in available:
+                self.drawn_lines.append(move)
+                score = self.minimax(depth - 1, False)
+                self.drawn_lines.remove(move)
+
+                best_score = max(score, best_score)
+
+            return best_score
+        else:
+            best_score = float('inf')
+            available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
+
+            for move in available:
+                self.drawn_lines.append(move)
+                score = self.minimax(depth - 1, True)
+                self.drawn_lines.remove(move)
+
+                best_score = min(score, best_score)
+
+            return best_score
+
+    # 평가함수 - 휴리스틱 구현 -> 삼각형을 만들 수 있는지에 대한 가중치 적용
+    def evaluate(self):
+        # Check if triangles can be formed
+        can_form_triangle = False
+        for triangle in self.triangles:
+            line1, line2, line3 = triangle
+            if line1 in self.drawn_lines and line2 in self.drawn_lines and line3 in self.drawn_lines:
+                can_form_triangle = True
+                break
+
+        if can_form_triangle:
+            return 1
+        else:
+            return 0
 
     def find_best_selection(self):
-        available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
-        return random.choice(available)
+        # 점이 12개까지 잡혔을 때 -> convex_hull을 통한 랜덤 점 잡기
+        if len(self.whole_points) <= 12:
+            return self.random_points_on_convex_hull()
+        else:
+            # 12개 이후 -> min_max를 이용한 점 잡기
+            machine_turn = True
+            available = [[point1, point2] for (point1, point2) in list(combinations(self.whole_points, 2)) if self.check_availability([point1, point2])]
+            best_score = float('-inf')
+            best_move = None
+
+            for move in available:
+                self.drawn_lines.append(move)
+                score = self.minimax(1, machine_turn)
+                self.drawn_lines.remove(move)
+
+                if score > best_score:
+                    best_score = score
+                    best_move = move
+
+            return best_move
     
     def check_availability(self, line):
         line_string = LineString(line)
